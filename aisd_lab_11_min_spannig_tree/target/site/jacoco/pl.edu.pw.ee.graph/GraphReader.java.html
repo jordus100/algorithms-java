@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="pl"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>GraphReader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">aisd_lab_11_min_spannig_tree</a> &gt; <a href="index.source.html" class="el_package">pl.edu.pw.ee.graph</a> &gt; <span class="el_source">GraphReader.java</span></div><h1>GraphReader.java</h1><pre class="source lang-java linenums">package pl.edu.pw.ee.graph;
+
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
+import static java.lang.String.format;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.SortedSet;
+import java.util.TreeSet;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+import pl.edu.pw.ee.exception.ReadingGraphFromFileException;
+
+public class GraphReader {
+
+<span class="fc" id="L23">    private final String twoNodesAndWeightLineRegex = &quot;^[A-Za-z]+ [A-Za-z]+ \\d+$&quot;;</span>
+<span class="fc" id="L24">    private final String nodeRegex = &quot;^[A-Za-z]+ [-]?\\d+ [-]?\\d+$&quot;;</span>
+<span class="fc" id="L25">    private final String edgeRegex = &quot;^[A-Za-z]+ [A-Za-z]+&quot;;</span>
+<span class="fc" id="L26">    private final Pattern patternTwoNodesAndWeight = Pattern.compile(twoNodesAndWeightLineRegex);</span>
+<span class="fc" id="L27">    private final Pattern patternNode = Pattern.compile(nodeRegex);</span>
+<span class="fc" id="L28">    private final Pattern patternEdge = Pattern.compile(edgeRegex);</span>
+
+    private final String fileToPath;
+    private List&lt;Edge&gt; edges;
+    private Map&lt;String, Node&gt; nodes;
+
+<span class="fc" id="L34">    public GraphReader(String fileToPath) {</span>
+<span class="fc" id="L35">        validateData(fileToPath);</span>
+
+<span class="fc" id="L37">        this.fileToPath = fileToPath;</span>
+<span class="fc" id="L38">        this.edges = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L39">        this.nodes = new HashMap&lt;&gt;();</span>
+
+<span class="fc" id="L41">        readAndSort();</span>
+<span class="fc" id="L42">    }</span>
+
+    public List&lt;Edge&gt; getEdges() {
+<span class="fc" id="L45">        return edges;</span>
+    }
+
+    private void validateData(String fileToPath) {
+<span class="pc bpc" id="L49" title="1 of 2 branches missed.">        if (fileToPath == null) {</span>
+<span class="nc" id="L50">            throw new IllegalArgumentException(&quot;File to path arg cannot be null!&quot;);</span>
+        }
+<span class="fc" id="L52">    }</span>
+
+    private void readAndSort() {
+<span class="fc" id="L55">        readGraphFromFile();</span>
+<span class="fc" id="L56">        sortEdgesByPriority();</span>
+<span class="fc" id="L57">    }</span>
+
+    private void readGraphFromFile() {
+        Edge edge;
+<span class="fc" id="L61">        int i = 1;</span>
+
+<span class="fc" id="L63">        try ( BufferedReader reader = new BufferedReader(new FileReader(fileToPath))) {</span>
+            String line;
+
+<span class="fc bfc" id="L66" title="All 2 branches covered.">            while ((line = reader.readLine()) != null) {</span>
+<span class="fc" id="L67">                edge = parseToEdge(line, i);</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">                if (edge != null) {</span>
+<span class="pc bpc" id="L69" title="1 of 2 branches missed.">                    if (!edges.contains(edge)) {</span>
+<span class="fc" id="L70">                        edges.add(edge);</span>
+                    } else {
+<span class="nc" id="L72">                        edges.remove(edge);</span>
+<span class="nc" id="L73">                        edges.add(edge);</span>
+                    }
+                }
+<span class="fc" id="L76">                i++;</span>
+            }
+<span class="nc" id="L78">        } catch (IOException e) {</span>
+<span class="nc" id="L79">            throw new ReadingGraphFromFileException(&quot;Cannot read file from path!&quot;, e);</span>
+<span class="fc" id="L80">        }</span>
+<span class="fc" id="L81">    }</span>
+
+    private Edge parseToEdge(String line, int lineNumber) {
+        String[] args;
+        Node start;
+        Node end;
+        int weight;
+<span class="fc" id="L88">        Edge edgeReturn = null;</span>
+
+<span class="fc" id="L90">        line = stripComment(line);</span>
+<span class="fc" id="L91">        line = line.trim();</span>
+<span class="fc" id="L92">        Matcher twoNodesAndWeightMatcher = patternTwoNodesAndWeight.matcher(line);</span>
+<span class="fc" id="L93">        Matcher nodeMatcher = patternNode.matcher(line);</span>
+<span class="fc" id="L94">        Matcher edgeMatcher = patternEdge.matcher(line);</span>
+
+<span class="fc bfc" id="L96" title="All 2 branches covered.">        if (twoNodesAndWeightMatcher.find()) {</span>
+<span class="fc" id="L97">            args = line.split(&quot; &quot;);</span>
+<span class="fc" id="L98">            start = new Node(args[0], 0, 0);</span>
+<span class="fc" id="L99">            end = new Node(args[1], 0, 0);</span>
+<span class="fc" id="L100">            weight = Integer.parseInt(args[2]);</span>
+
+<span class="fc" id="L102">            edgeReturn = new Edge(start, end, weight);</span>
+
+<span class="fc bfc" id="L104" title="All 2 branches covered.">        } else if (nodeMatcher.find()) {</span>
+<span class="fc" id="L105">            args = line.split(&quot; &quot;);</span>
+<span class="fc" id="L106">            nodes.put(args[0], new Node(args[0], Integer.parseInt(args[1]), Integer.parseInt(args[2])));</span>
+<span class="fc bfc" id="L107" title="All 2 branches covered.">        } else if (edgeMatcher.find()) {</span>
+<span class="fc" id="L108">            args = line.split(&quot; &quot;);</span>
+<span class="fc" id="L109">            String node1 = args[0];</span>
+<span class="fc" id="L110">            String node2 = args[1];</span>
+<span class="pc bpc" id="L111" title="1 of 4 branches missed.">            if (nodes.containsKey(node1) &amp;&amp; nodes.containsKey(node2)) {</span>
+<span class="fc" id="L112">                double edgeWeight = Math.sqrt(Math.pow(nodes.get(node2).x - nodes.get(node1).x, 2.0) + Math.pow(nodes.get(node2).y - nodes.get(node1).y, 2.0));</span>
+<span class="fc" id="L113">                edgeReturn = new Edge(nodes.get(node1), nodes.get(node2), edgeWeight);</span>
+            }
+        }
+<span class="fc" id="L116">        return edgeReturn;</span>
+    }
+
+    private String stripComment(String line) {
+<span class="fc bfc" id="L120" title="All 2 branches covered.">        if (line.contains(&quot;#&quot;)) {</span>
+<span class="fc" id="L121">            return line.substring(0, line.indexOf('#'));</span>
+        } else {
+<span class="fc" id="L123">            return line;</span>
+        }
+    }
+
+    private void sortEdgesByPriority() {
+<span class="fc" id="L128">        EdgeWeightComparator weightComparator = new EdgeWeightComparator();</span>
+<span class="fc" id="L129">        Collections.sort(edges, weightComparator);</span>
+<span class="fc" id="L130">    }</span>
+
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.7.202105040129</span></div></body></html>
